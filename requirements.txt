@@ -1,0 +1,8 @@
+playwright
+pydantic
+PyYAML
+openai
+python-docx
+pypdf
+tenacity
+rapidfuzz
