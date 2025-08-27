@@ -1,0 +1,13 @@
+full_name: 张三
+first_name: San
+last_name: Zhang
+email: zhangsan@example.com
+phone: "+86 13800000000"
+country: 中国
+city: 上海
+skills:
+- Python
+- SQL
+- 数据分析
+summary: "这是一个测试 profile，用于 CI dry-run。"
+cover_letter: "测试 cover letter。"
