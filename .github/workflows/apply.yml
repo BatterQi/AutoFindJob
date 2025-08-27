@@ -1,0 +1,93 @@
+name: Apply Job (Auto Resume Agent)
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: '职位申请链接（企业/ATS申请页URL）'
+        required: true
+        type: string
+      auto_submit:
+        description: '是否自动提交（默认只 dry-run 预演）'
+        required: false
+        default: false
+        type: boolean
+      headful:
+        description: '是否有头模式(可视化调试)'
+        required: false
+        default: false
+        type: boolean
+      max_steps:
+        description: '最多“下一步”步数'
+        required: false
+        default: 5
+        type: number
+      profile_filename:
+        description: 'profile.yaml 文件名（若走仓库文件）'
+        required: false
+        default: 'tests/profile.yaml'
+        type: string
+      resume_filename:
+        description: '简历文件名（若走仓库文件）'
+        required: false
+        default: 'tests/resume.txt'
+        type: string
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      RESUME_B64: ${{ secrets.RESUME_B64 }}
+      PROFILE_B64: ${{ secrets.PROFILE_B64 }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          python -m playwright install --with-deps
+
+      - name: Restore profile.yaml from secret (optional)
+        if: env.PROFILE_B64 != ''
+        run: |
+          echo "$PROFILE_B64" | base64 -d > profile.yaml
+          echo "✔ profile.yaml restored from secret"
+
+      - name: Restore resume from secret (optional)
+        if: env.RESUME_B64 != ''
+        run: |
+          RESUME_NAME=${{ inputs.resume_filename }}
+          echo "$RESUME_B64" | base64 -d > "$RESUME_NAME"
+          echo "✔ resume restored from secret to $RESUME_NAME"
+
+      - name: Dry-run (preview only)
+        if: ${{ inputs.auto_submit == false }}
+        run: |
+          python auto_resume_agent.py apply \
+            --url "${{ inputs.url }}" \
+            --profile "${{ inputs.profile_filename }}" \
+            --resume "${{ inputs.resume_filename }}" \
+            ${{ inputs.headful && '--headful' || '' }} \
+            --dry-run \
+            --max-steps ${{ inputs.max_steps }}
+
+      - name: Real submit (be careful)
+        if: ${{ inputs.auto_submit == true }}
+        run: |
+          python auto_resume_agent.py apply \
+            --url "${{ inputs.url }}" \
+            --profile "${{ inputs.profile_filename }}" \
+            --resume "${{ inputs.resume_filename }}" \
+            ${{ inputs.headful && '--headful' || '' }} \
+            --auto-submit \
+            --max-steps ${{ inputs.max_steps }}
